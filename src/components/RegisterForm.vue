@@ -23,6 +23,9 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import axios from 'axios'
+import { defineEmits } from 'vue'
+
+const emit = defineEmits(['kaydoldu'])
 
 const user = reactive({
   name: '',
@@ -36,10 +39,15 @@ const registerUser = async () => {
   try {
     const response = await axios.post('http://localhost:8080/User/save', user)
     message.value = 'Kayıt başarılı! Hoş geldin, ' + response.data.name
-    // Gerekirse formu sıfırla:
+
+    // Formu temizle
     user.name = ''
     user.userName = ''
     user.password = ''
+
+    // Ana bileşene haber ver
+    emit('kaydoldu')
+
   } catch (error) {
     message.value = 'Kayıt başarısız: ' + error.message
   }

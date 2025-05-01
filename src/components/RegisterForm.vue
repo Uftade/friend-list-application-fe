@@ -17,15 +17,16 @@
       <button type="submit">Kayıt Ol</button>
     </form>
     <p v-if="message">{{ message }}</p>
+    <button @click="goToLogin">Geri Dön</button>
   </div>
 </template>
 
 <script setup>
 import { reactive, ref } from 'vue'
 import axios from 'axios'
-import { defineEmits } from 'vue'
+import { useRouter } from 'vue-router'
 
-const emit = defineEmits(['kaydoldu'])
+const router = useRouter()
 
 const user = reactive({
   name: '',
@@ -38,19 +39,16 @@ const message = ref('')
 const registerUser = async () => {
   try {
     const response = await axios.post('http://localhost:8080/User/save', user)
-    message.value = 'Kayıt başarılı! Hoş geldin, ' + response.data.name
-
-    // Formu temizle
-    user.name = ''
-    user.userName = ''
-    user.password = ''
-
-    // Ana bileşene haber ver
-    emit('kaydoldu')
-
+    message.value = `Kayıt başarılı! Hoş geldin, ${response.data.name}`
+    // Giriş yap sayfasına yönlendir
+    router.push('/')
   } catch (error) {
     message.value = 'Kayıt başarısız: ' + error.message
   }
+}
+
+const goToLogin = () => {
+  router.push('/')
 }
 </script>
 
@@ -70,5 +68,9 @@ form div {
 input {
   width: 100%;
   padding: 0.5rem;
+}
+
+button {
+  margin-top: 1rem;
 }
 </style>

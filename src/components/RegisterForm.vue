@@ -1,7 +1,7 @@
 <template>
   <div class="register-container">
     <h2>Kayıt Ol</h2>
-    <form @submit.prevent="registerUser">
+    <form @submit.prevent="registerUser" enctype="multipart/form-data">
       <div>
         <label>Ad Soyad:</label>
         <input v-model="user.name" required />
@@ -13,6 +13,10 @@
       <div>
         <label>Şifre:</label>
         <input type="password" v-model="user.password" required />
+      </div>
+      <div>
+        <label>Profil Fotoğrafı:</label>
+        <input type="file" @change="handleFileUpload" accept="image/*" />
       </div>
       <button type="submit">Kayıt Ol</button>
     </form>
@@ -31,16 +35,29 @@ const router = useRouter()
 const user = reactive({
   name: '',
   userName: '',
-  password: ''
+  password: '',
+  imagePath: ''
 })
 
+const selectedFile = ref(null)
 const message = ref('')
+
+const handleFileUpload = (event) => {
+  selectedFile.value = event.target.files[0]
+}
 
 const registerUser = async () => {
   try {
+    if (selectedFile.value) {
+      const formData = new FormData()
+      formData.append('file', selectedFile.value)
+
+      const imageRes = await axios.post('http://localhost:8080/User/upload', formData)
+      user.imagePath = imageRes.data // örneğin: "uploads/abc123.jpg"
+    }
+
     const response = await axios.post('http://localhost:8080/User/save', user)
     message.value = `Kayıt başarılı! Hoş geldin, ${response.data.name}`
-    // Giriş yap sayfasına yönlendir
     router.push('/')
   } catch (error) {
     message.value = 'Kayıt başarısız: ' + error.message

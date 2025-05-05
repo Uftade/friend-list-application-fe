@@ -1,77 +1,214 @@
 <template>
   <div class="dashboard-container">
-    <h1>Hoş Geldiniz, {{ loggedInUser?.name || 'Giriş yapan kullanıcı bulunamadı' }}</h1>
+    <h1>👋 Hoş Geldiniz, {{ loggedInUser?.name || 'Giriş yapan kullanıcı bulunamadı' }}</h1>
 
-    <h2>Sistemdeki Kullanıcılar:</h2>
-    <ul v-if="users.length > 0">
-      <li
-          v-for="(user, index) in users"
-          :key="user.userId"
-          @mouseover="showLink[index] = true"
-          @mouseleave="showLink[index] = false"
-          style="display: flex; align-items: center; gap: 10px;"
-      >
-        <!-- Profil Fotoğrafı -->
-        <img
-            :src="user.imageUrl ? `http://localhost:8080/${user.imageUrl}` : defaultImage"
-            alt="profil"
-            class="profile-image"
-        />
+    <!-- Sistemdeki Kullanıcılar -->
+    <section>
+      <h2>Sistemdeki Kullanıcılar</h2>
+      <div class="scrollable-grid">
+        <div
+            v-for="(user, index) in users"
+            :key="user.userId"
+            class="user-card"
+        >
+          <strong>{{ user.name }}</strong>
+          <p>{{ user.userName }}</p>
+          <router-link :to="`/profile/${user.userId}`">Profili Gör</router-link>
+        </div>
+      </div>
+    </section>
 
-        <!-- Kullanıcı Adı -->
-        {{ user.name }} ({{ user.userName }})
-        <span v-if="showLink[index]">
-          <router-link :to="`/profile/${user.userId}`">{{ user.name }}</router-link>
-        </span>
-      </li>
-    </ul>
-    <p v-else>Henüz kullanıcı yok.</p>
+    <!-- Arkadaşlar -->
+    <section v-if="friends.length > 0">
+      <h2>Arkadaşlarınız</h2>
+      <div class="scrollable-grid">
+        <div v-for="friend in friends" :key="friend.userId" class="user-card friend">
+          <strong>{{ friend.name }}</strong>
+          <p>{{ friend.userName }}</p>
+        </div>
+      </div>
+    </section>
 
-    <!-- Gelen Arkadaşlık İsteklerini Göster -->
-    <PendingRequests :user-id="loggedInUser.userId" />
+    <!-- Bekleyen İstekler -->
+    <section>
+      <h2>Bekleyen Arkadaşlık İstekleri</h2>
+      <ul class="pending-list" v-if="pendingRequests.length > 0">
+        <li v-for="request in pendingRequests" :key="request.friendshipId">
+          <span>{{ request.requesterName }} arkadaşlık isteği gönderdi.</span>
+          <button @click="acceptRequest(request.friendshipId)">Kabul Et</button>
+          <button class="reject" @click="rejectRequest(request.friendshipId)">Reddet</button>
+        </li>
+      </ul>
+      <p v-else>Henüz arkadaşlık isteği yok.</p>
+    </section>
 
-    <!-- Arkadaşlarım Listesi -->
-    <FriendsList :user-id="loggedInUser.userId" :users="users" />
-
-    <!-- İstek attıklarım Listesi -->
-    <SentRequests :user-id="loggedInUser.userId" />
+    <!-- Çıkış Yap -->
+    <button class="logout-button" @click="logout">Çıkış Yap</button>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import PendingRequests from '../components/PendingRequests.vue'
-import FriendsList from '../components/FriendsList.vue'
-import SentRequests from "@/components/SentRequests.vue"
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'))
 const users = ref([])
-const showLink = ref([])
-const defaultImage = '/default-user.png' // public klasörüne default-user.png ekle
+const friends = ref([])
+const pendingRequests = ref([])
 
 onMounted(() => {
   fetchUsers()
+  fetchFriends()
+  fetchPendingRequests()
 })
 
 const fetchUsers = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/User/all')
-    users.value = response.data.filter(
-        (user) => user.userId !== loggedInUser?.userId
-    )
-    showLink.value = new Array(users.value.length).fill(false)
+    const response = await axios.get('http://localhost:8080/User/list')
+    users.value = response.data
   } catch (error) {
-    console.error('Kullanıcılar alınamadı:', error)
+    console.error('Kullanıcılar alınırken hata:', error)
   }
+}
+
+const fetchFriends = async () => {
+  try {
+    const response = await axios.get(`http://localhost:8080/friendship/friends/${loggedInUser.userId}`)
+    friends.value = response.data
+  } catch (error) {
+    console.error('Arkadaşlar alınırken hata:', error)
+  }
+}
+
+const fetchPendingRequests = async () => {
+  try {
+    const response = await axios.get(`http://localhost:8080/friendship/pending/${loggedInUser.userId}`)
+    for (let request of response.data) {
+      const userResponse = await axios.get(`http://localhost:8080/User/${request.requesterId}`)
+      request.requesterName = userResponse.data.userName
+    }
+    pendingRequests.value = response.data
+  } catch (error) {
+    console.error('İstekler alınırken hata:', error)
+  }
+}
+
+const acceptRequest = async (friendshipId) => {
+  await axios.post('http://localhost:8080/friendship/accept', { friendshipId })
+  fetchPendingRequests()
+  fetchFriends()
+}
+
+const rejectRequest = async (friendshipId) => {
+  await axios.post('http://localhost:8080/friendship/reject', { friendshipId })
+  fetchPendingRequests()
+}
+
+const logout = () => {
+  localStorage.removeItem('loggedInUser')
+  router.push('/')
 }
 </script>
 
 <style scoped>
-.profile-image {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
+.dashboard-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background-color: #f9f9f9;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.scrollable-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.user-card {
+  padding: 1rem;
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  background-color: #fdfdfd;
+  text-align: center;
+  box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.user-card.friend {
+  background-color: #e0f7e9;
+}
+
+.user-card a {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #1976d2;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.user-card a:hover {
+  text-decoration: underline;
+}
+
+.pending-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.pending-list li {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fff;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+button {
+  margin-left: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+.logout-button {
+  margin-top: 2rem;
+  background-color: #f44336;
+}
+
+.logout-button:hover {
+  background-color: #e53935;
+}
+button.reject {
+  background-color: #f44336;
+}
+
+button.reject:hover {
+  background-color: #e53935;
 }
 </style>

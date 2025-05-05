@@ -1,35 +1,34 @@
 <template>
-  <div class="page-background">
-    <div class="register-container">
-      <img src="/default-user.png" alt="Profil" class="profile-img" />
+  <transition name="fade-slide">
+    <div class="register-container" v-if="show">
       <h2>Kayıt Ol</h2>
-      <form @submit.prevent="registerUser" enctype="multipart/form-data">
-        <div>
+      <form @submit.prevent="registerUser">
+        <div class="form-group">
           <label>Ad Soyad:</label>
-          <input v-model="user.name" required />
+          <input v-model="user.name" placeholder="Adınızı girin" required />
         </div>
-        <div>
+        <div class="form-group">
           <label>Kullanıcı Adı:</label>
-          <input v-model="user.userName" required />
+          <input v-model="user.userName"  placeholder="Kullanıcı adınızı girin" required />
         </div>
-        <div>
+        <div class="form-group">
           <label>Şifre:</label>
-          <input type="password" v-model="user.password" required />
+          <input type="password" v-model="user.password" placeholder="Şifrenizi girin" required />
         </div>
-        <div>
-          <label>Profil Fotoğrafı:</label>
-          <input type="file" @change="handleFileUpload" accept="image/*" />
+        <div class="form-group">
+          <label>Profil Resmi (örnek: onur.jpg):</label>
+          <input v-model="user.profileImage" placeholder="onur.jpg" />
         </div>
-        <button type="submit" class="submit-btn">📝 Kayıt Ol</button>
+        <button type="submit">Kayıt Ol</button>
       </form>
       <p v-if="message">{{ message }}</p>
-      <button @click="goToLogin" class="back-btn">↩ Geri Dön</button>
+      <button @click="goToLogin" class="back-button">Geri Dön</button>
     </div>
-  </div>
+  </transition>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 
@@ -39,26 +38,18 @@ const user = reactive({
   name: '',
   userName: '',
   password: '',
-  imagePath: ''
+  profileImage: ''
 })
 
-const selectedFile = ref(null)
 const message = ref('')
+const show = ref(false)
 
-const handleFileUpload = (event) => {
-  selectedFile.value = event.target.files[0]
-}
+onMounted(() => {
+  show.value = true
+})
 
 const registerUser = async () => {
   try {
-    if (selectedFile.value) {
-      const formData = new FormData()
-      formData.append('file', selectedFile.value)
-
-      const imageRes = await axios.post('http://localhost:8080/User/upload', formData)
-      user.imagePath = imageRes.data
-    }
-
     const response = await axios.post('http://localhost:8080/User/save', user)
     message.value = `Kayıt başarılı! Hoş geldin, ${response.data.name}`
     router.push('/')
@@ -73,96 +64,85 @@ const goToLogin = () => {
 </script>
 
 <style scoped>
-/* Arka plan */
-.page-background {
-  min-height: 100vh;
-  background: linear-gradient(to right, #fbc2eb, #a6c1ee); /* pembe → mor-mavi */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-family: 'Segoe UI', sans-serif;
+/* Fade-slide animasyonu */
+.fade-slide-enter-active {
+  animation: fadeSlideIn 0.6s ease-out forwards;
+}
+.fade-slide-leave-active {
+  opacity: 0;
+}
+@keyframes fadeSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-
-/* Form kutusu */
 .register-container {
-  background: rgba(255, 255, 255, 0.95);
+  max-width: 400px;
+  margin: 2rem auto;
   padding: 2rem;
-  border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  max-width: 420px;
-  width: 100%;
-  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Profil görseli */
-.profile-img {
-  width: 90px;
-  border-radius: 50%;
-  opacity: 0.7;
-  margin-bottom: 1rem;
+form {
+  display: flex;
+  flex-direction: column;
 }
 
-/* Başlık */
-h2 {
-  margin-bottom: 1.5rem;
+.form-group {
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  margin-bottom: 0.3rem;
   font-weight: bold;
   color: #333;
 }
 
-/* Form alanları */
-form div {
-  margin-bottom: 1rem;
-  text-align: left;
-}
-
-label {
-  display: block;
-  margin-bottom: 0.4rem;
-  font-weight: 500;
-  color: #555;
-}
-
-input[type="text"],
-input[type="password"],
-input[type="file"] {
-  width: 100%;
-  padding: 0.6rem;
+input {
+  padding: 0.5rem;
+  font-size: 1rem;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-  outline: none;
+  border-radius: 6px;
 }
 
-/* Butonlar */
 button {
-  padding: 0.6rem 1.2rem;
   margin-top: 1rem;
-  font-size: 1rem;
+  padding: 0.6rem;
+  background-color: #4CAF50;
+  color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
+  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color 0.3s;
 }
 
-.submit-btn {
-  background-color: #4caf50;
-  color: white;
+button:hover {
+  background-color: #45a049;
 }
 
-.submit-btn:hover {
-  background-color: #388e3c;
-  transform: scale(1.05);
+.back-button {
+  background-color: #2196f3;
+  margin-top: 1rem;
 }
 
-.back-btn {
+.back-button:hover {
   background-color: #1976d2;
-  color: white;
-  margin-left: 0.5rem;
 }
 
-.back-btn:hover {
-  background-color: #1565c0;
-  transform: scale(1.05);
+p {
+  margin-top: 1rem;
+  color: #333;
 }
 </style>

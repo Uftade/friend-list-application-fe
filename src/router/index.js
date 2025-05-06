@@ -15,7 +15,7 @@ const routes = [
         component: Profile
     },
     {
-        path: '/edit-profile/:id',   // <-- yeni rota
+        path: '/edit-profile/:id',    // <-- yeni rota
         name: 'EditProfile',
         component: EditProfile
     }

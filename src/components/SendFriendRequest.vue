@@ -1,64 +1,93 @@
 <template>
   <div>
-    <h2>Arkadaşlık İsteği Gönder</h2>
-    <p>Gönderen ID: {{ requesterId }}</p>
-    <input type="number" v-model="recieverId" placeholder="Receiver ID" required />
-    <button @click="sendFriendRequest" :disabled="loading">İstek Gönder</button>
-    <p v-if="message" :class="messageType">{{ message }}</p>
+    <button :disabled="buttonDisabled" @click="sendFriendRequest">
+      {{ buttonText }}
+    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, defineProps } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 
 const props = defineProps({
-  requesterId: Number
+  requesterId: Number,
+  recieverId: Number
 })
 
-const recieverId = ref(null)
-const loading = ref(false)
-const message = ref('')
-const messageType = ref('')
+const status = ref('LOADING')
+const buttonText = ref('Yükleniyor...')
+const buttonDisabled = ref(true)
 
-const sendFriendRequest = async () => {
-  if (!props.requesterId || !recieverId.value) {
-    message.value = 'Lütfen alıcı ID girin.'
-    messageType.value = 'error'
-    return
-  }
+const checkStatus = async () => {
+  if (!props.requesterId || !props.recieverId) return
 
-  loading.value = true
   try {
-    const response = await axios.post('http://localhost:8080/friendship/add', {
-      requesterId: props.requesterId,
-      recieverId: recieverId.value
+    const response = await axios.get('http://localhost:8080/friendship/status', {
+      params: {
+        requesterId: props.requesterId,
+        receiverId: props.recieverId
+      }
     })
 
-    message.value = 'Arkadaşlık isteği başarıyla gönderildi!'
-    messageType.value = 'success'
-    recieverId.value = null
-
+    status.value = response.data.status || 'NONE'
+    updateButton()
   } catch (error) {
-    message.value = 'İstek gönderilemedi: ' + error.message
-    messageType.value = 'error'
-  } finally {
-    loading.value = false
+    console.error('Durum sorgusu hatası:', error)
+    status.value = 'NONE'
+    updateButton()
   }
 }
+
+const updateButton = () => {
+  if (status.value === 'PENDING') {
+    buttonText.value = 'İstek Gönderildi'
+    buttonDisabled.value = true
+  } else if (status.value === 'ACCEPTED') {
+    buttonText.value = 'Zaten Arkadaşsınız'
+    buttonDisabled.value = true
+  } else {
+    buttonText.value = 'İstek Gönder'
+    buttonDisabled.value = false
+  }
+}
+
+const sendFriendRequest = async () => {
+  try {
+    await axios.post('http://localhost:8080/friendship/add', {
+      requesterId: props.requesterId,
+      recieverId: props.recieverId
+    })
+    status.value = 'PENDING'
+    updateButton()
+  } catch (error) {
+    console.error('İstek gönderilemedi:', error)
+  }
+}
+
+// İlk yüklendiğinde durumu kontrol et
+onMounted(() => {
+  checkStatus()
+})
+
+// recieverId her değiştiğinde yeniden kontrol et (dinamik yapı için)
+watch(() => props.recieverId, () => {
+  checkStatus()
+})
 </script>
 
 <style scoped>
+button {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #2196F3;
+  color: white;
+  cursor: pointer;
+}
 button:disabled {
-  background-color: #ccc;
+  background-color: #aaa;
   cursor: not-allowed;
-}
-
-p.success {
-  color: green;
-}
-
-p.error {
-  color: red;
 }
 </style>

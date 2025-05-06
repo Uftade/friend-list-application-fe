@@ -2,6 +2,12 @@
   <transition name="fade-slide">
     <div class="profile-container" v-if="user && !isLoading">
       <h1>{{ user.name }} ({{ user.userName }})</h1>
+
+      <SendFriendRequest
+          :requester-id="loggedInUser.userId"
+          :reciever-id="user.userId"
+      />
+
       <p><strong>Ad Soyad:</strong> {{ user.name }}</p>
       <p><strong>Kullanıcı Adı:</strong> {{ user.userName }}</p>
 
@@ -12,7 +18,6 @@
 
       <!-- Butonlar sadece giriş yapan kullanıcı bu profile bakmıyorsa gösterilir -->
       <div v-if="loggedInUserId !== user.userId">
-        <button @click="sendFriendRequest">Arkadaşlık İsteği Gönder</button>
         <button @click="goBack">Geri Dön</button>
       </div>
       <!-- Kendine bakıyorsa sadece geri dön butonu görünsün -->
@@ -33,6 +38,16 @@
       <p v-else>Bu kullanıcının henüz arkadaşı yok.</p>
     </div>
   </transition>
+  <!-- Ortak Arkadaşlar -->
+  <div v-if="mutualFriends.length > 0" class="friends-list">
+    <h3>🧑‍🤝‍🧑 Ortak Arkadaşlar ({{ mutualFriends.length }})</h3>
+    <ul>
+      <li v-for="friend in mutualFriends" :key="friend.userId">
+        {{ friend.name }} ({{ friend.userName }})
+      </li>
+    </ul>
+  </div>
+
 
   <p v-if="isLoading">Profil bilgileri yükleniyor...</p>
   <p v-if="errorMessage" style="color: red;">{{ errorMessage }}</p>
@@ -42,6 +57,8 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
+import SendFriendRequest from '@/components/SendFriendRequest.vue'
+
 
 const user = ref(null)
 const friends = ref([])  // Arkadaşlar listesi
@@ -49,6 +66,8 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 const route = useRoute()
 const router = useRouter()
+const mutualFriends = ref([])
+
 
 // Giriş yapan kullanıcıyı localStorage'dan al
 const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'))
@@ -59,7 +78,32 @@ onMounted(() => {
   const userId = route.params.id
   fetchUserProfile(userId)
   fetchFriends(userId)  // Kullanıcının arkadaşlarını alalım
+  fetchMutualFriends()
+
 })
+
+const fetchMutualFriends = async () => {
+  try {
+    const response = await axios.get(`http://localhost:8080/friendship/mutual?user1=${loggedInUserId}&user2=${route.params.id}`)
+
+    // Aynı userId’ye sahip olanları filtrele (tekilleştirme)
+    const uniqueFriends = []
+    const seen = new Set()
+
+    for (const friend of response.data) {
+      if (!seen.has(friend.userId)) {
+        seen.add(friend.userId)
+        uniqueFriends.push(friend)
+      }
+    }
+
+    mutualFriends.value = uniqueFriends
+  } catch (error) {
+    console.error('Ortak arkadaşlar alınamadı:', error)
+  }
+}
+
+
 
 const fetchUserProfile = async (id) => {
   try {

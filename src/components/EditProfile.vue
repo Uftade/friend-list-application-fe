@@ -1,4 +1,4 @@
-<template>
+ <template>
   <div class="edit-profile">
     <!-- X simgesi sağ üst köşede -->
     <button class="close-button" @click="goBack">×</button>

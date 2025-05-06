@@ -2,7 +2,18 @@
   <div class="dashboard-container">
     <h1>👋 Hoş Geldiniz, {{ loggedInUser?.name || 'Giriş yapan kullanıcı bulunamadı' }}</h1>
 
-    <!-- Sistemdeki Kullanıcılar -->
+    <!-- Arkadaşlar -->
+    <section v-if="friends.length > 0">
+      <h2>Arkadaşlarınız</h2>
+      <div class="scrollable-grid">
+        <div v-for="friend in friends" :key="friend.userId" class="user-card friend">
+          <strong>{{ friend.name }}</strong>
+          <p>{{ friend.userName }}</p>
+          <button class="remove-button" @click="removeFriend(friend.userId)">Çıkar</button>
+        </div>
+      </div>
+    </section>
+
     <section>
       <h2>Sistemdeki Kullanıcılar</h2>
       <div class="scrollable-grid">
@@ -14,17 +25,13 @@
           <strong>{{ user.name }}</strong>
           <p>{{ user.userName }}</p>
           <router-link :to="`/profile/${user.userId}`">Profili Gör</router-link>
-        </div>
-      </div>
-    </section>
 
-    <!-- Arkadaşlar -->
-    <section v-if="friends.length > 0">
-      <h2>Arkadaşlarınız</h2>
-      <div class="scrollable-grid">
-        <div v-for="friend in friends" :key="friend.userId" class="user-card friend">
-          <strong>{{ friend.name }}</strong>
-          <p>{{ friend.userName }}</p>
+        <!-- 💡 Sadece başka kullanıcılar için istek gönderme bileşeni -->
+          <SendFriendRequest
+              v-if="user.userId !== loggedInUser.userId"
+              :requester-id="loggedInUser.userId"
+              :reciever-id="user.userId"
+          />
         </div>
       </div>
     </section>
@@ -51,6 +58,8 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import SendFriendRequest from '@/components/SendFriendRequest.vue'
+
 
 const router = useRouter()
 const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'))
@@ -72,6 +81,29 @@ const fetchUsers = async () => {
     console.error('Kullanıcılar alınırken hata:', error)
   }
 }
+
+const removeFriend = async (friendId) => {
+  try {
+    // FriendshipId'yi bulmak için backend'e sorgu at
+    const response = await axios.get(`http://localhost:8080/friendship/accepted/${loggedInUser.userId}`)
+    const friendship = response.data.find(f =>
+        (f.requesterId === friendId && f.receiverId === loggedInUser.userId) ||
+        (f.receiverId === friendId && f.requesterId === loggedInUser.userId)
+    )
+
+    if (friendship) {
+      await axios.post('http://localhost:8080/friendship/remove', {
+        friendshipId: friendship.friendshipId
+      })
+      fetchFriends()
+    } else {
+      console.warn('Arkadaşlık bulunamadı.')
+    }
+  } catch (error) {
+    console.error('Silme sırasında hata:', error)
+  }
+}
+
 
 const fetchFriends = async () => {
   try {
@@ -171,6 +203,7 @@ h1, h2 {
   padding-left: 0;
 }
 
+
 .pending-list li {
   margin-bottom: 1rem;
   display: flex;
@@ -191,6 +224,14 @@ button {
   color: white;
   cursor: pointer;
 }
+.remove-button {
+  margin-top: 0.5rem;
+  background-color: #f44336;
+}
+.remove-button:hover {
+  background-color: #e53935;
+}
+
 
 button:hover {
   background-color: #45a049;

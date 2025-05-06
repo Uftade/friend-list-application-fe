@@ -1,17 +1,13 @@
 <script setup>
 
-import Main from "@/components/Main.vue";
 </script>
 
+
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
 
-    <div class="wrapper">
-      <Main/>
-    </div>
-  </header>
-
+  <div id="app">
+    <router-view />
+  </div>
 
 </template>
 

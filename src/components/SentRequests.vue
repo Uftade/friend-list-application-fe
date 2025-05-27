@@ -32,7 +32,7 @@ const fetchSentRequests = async () => {
 
 const fetchUsers = async () => {
   try {
-    const res = await axios.get('http://localhost:8080/User/all')
+    const res = await axios.get('http://localhost:8080/users/all')
     allUsers.value = res.data
   } catch (err) {
     console.error('Kullanıcılar alınamadı:', err)

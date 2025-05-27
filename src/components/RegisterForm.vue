@@ -50,7 +50,7 @@ onMounted(() => {
 
 const registerUser = async () => {
   try {
-    const response = await axios.post('http://localhost:8080/User/save', user)
+    const response = await axios.post('http://localhost:8080/users/save', user)
     message.value = `Kayıt başarılı! Hoş geldin, ${response.data.name}`
     router.push('/')
   } catch (error) {

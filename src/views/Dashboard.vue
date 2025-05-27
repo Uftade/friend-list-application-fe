@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard-container">
-    <h1>👋 Hoş Geldiniz, {{ loggedInUser?.name || 'Giriş yapan kullanıcı bulunamadı' }}</h1>
-
+    <h1>👋 Hoş Geldiniz, {{ loggedInUser?.value?.name || 'Giriş yapan kullanıcı bulunamadı' }}</h1>
+    v
     <!-- Arkadaşlar -->
     <section v-if="friends.length > 0">
       <h2>Arkadaşlarınız</h2>
@@ -26,12 +26,15 @@
           <p>{{ user.userName }}</p>
           <router-link :to="`/profile/${user.userId}`">Profili Gör</router-link>
 
-        <!-- 💡 Sadece başka kullanıcılar için istek gönderme bileşeni -->
+          <!-- 💡 Sadece başka kullanıcılar için istek gönderme bileşeni -->
           <SendFriendRequest
-              v-if="user.userId !== loggedInUser.userId"
-              :requester-id="loggedInUser.userId"
+              v-if="user.userId !== loggedInUser.value?.userId"
+              :requester-id="loggedInUser.value?.userId"
               :reciever-id="user.userId"
           />
+
+
+
         </div>
       </div>
     </section>
@@ -52,6 +55,8 @@
     <!-- Çıkış Yap -->
     <button class="logout-button" @click="logout">Çıkış Yap</button>
   </div>
+  <button @click="testSecureEndpoint" class="test-button">🔒 Güvenli Alanı Test Et</button>
+
 </template>
 
 <script setup>
@@ -62,32 +67,47 @@ import SendFriendRequest from '@/components/SendFriendRequest.vue'
 
 
 const router = useRouter()
-const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'))
+const loggedInUser = ref(JSON.parse(localStorage.getItem('loggedInUser')))
 const users = ref([])
 const friends = ref([])
 const pendingRequests = ref([])
 
 onMounted(() => {
-  fetchUsers()
-  fetchFriends()
-  fetchPendingRequests()
-})
+  const userStr = localStorage.getItem("loggedInUser");
+  if (userStr) {
+    loggedInUser.value = JSON.parse(userStr);
+    fetchUsers();
+    fetchFriends();
+    fetchPendingRequests();
+  } else {
+    alert("Giriş yapan kullanıcı bulunamadı");
+    router.push("/");
+  }
+});
 
 const fetchUsers = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/User/list')
+    const response = await axios.get('http://localhost:8080/users/list')
     users.value = response.data
   } catch (error) {
     console.error('Kullanıcılar alınırken hata:', error)
   }
 }
+const testSecureEndpoint = async () => {
+  try {
+    const response = await axios.get("http://localhost:8080/users/secure");
+    alert(response.data); // ✅ Başarılı erişim mesajı
+  } catch (err) {
+    alert("❌ Güvenli alana erişim reddedildi.");
+  }
+};
 
 const removeFriend = async (friendId) => {
   try {
     // FriendshipId'yi bulmak için backend'e sorgu at
-    const response = await axios.get(`http://localhost:8080/friendship/accepted/${loggedInUser.userId}`)
+    const response = await axios.get(`http://localhost:8080/friendship/friends/${loggedInUser.value.userId}`)
     const friendship = response.data.find(f =>
-        (f.requesterId === friendId && f.receiverId === loggedInUser.userId) ||
+        (f.requesterId === friendId && f.receiverId === loggedInUser.value.userId) ||
         (f.receiverId === friendId && f.requesterId === loggedInUser.userId)
     )
 
@@ -104,10 +124,9 @@ const removeFriend = async (friendId) => {
   }
 }
 
-
 const fetchFriends = async () => {
   try {
-    const response = await axios.get(`http://localhost:8080/friendship/friends/${loggedInUser.userId}`)
+    const response = await axios.get(`http://localhost:8080/friendship/friends/${loggedInUser.value.userId}`)
     friends.value = response.data
   } catch (error) {
     console.error('Arkadaşlar alınırken hata:', error)
@@ -116,9 +135,15 @@ const fetchFriends = async () => {
 
 const fetchPendingRequests = async () => {
   try {
-    const response = await axios.get(`http://localhost:8080/friendship/pending/${loggedInUser.userId}`)
+    const userId = loggedInUser.value?.userId
+    if (!userId) {
+      console.warn("Giriş yapan kullanıcı bulunamadı. İstek yapılmadı.")
+      return
+    }
+
+    const response = await axios.get(`http://localhost:8080/friendship/pending/${userId}`)
     for (let request of response.data) {
-      const userResponse = await axios.get(`http://localhost:8080/User/${request.requesterId}`)
+      const userResponse = await axios.get(`http://localhost:8080/users/${request.requesterId}`)
       request.requesterName = userResponse.data.userName
     }
     pendingRequests.value = response.data
@@ -126,6 +151,7 @@ const fetchPendingRequests = async () => {
     console.error('İstekler alınırken hata:', error)
   }
 }
+
 
 const acceptRequest = async (friendshipId) => {
   await axios.post('http://localhost:8080/friendship/accept', { friendshipId })
@@ -252,4 +278,18 @@ button.reject {
 button.reject:hover {
   background-color: #e53935;
 }
+.test-button {
+  padding: 0.6rem 1.2rem;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  margin-top: 1rem;
+  cursor: pointer;
+  font-weight: bold;
+}
+.test-button:hover {
+  background-color: #1976d2;
+}
+
 </style>

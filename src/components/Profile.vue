@@ -107,7 +107,7 @@ const fetchMutualFriends = async () => {
 
 const fetchUserProfile = async (id) => {
   try {
-    const response = await axios.get(`http://localhost:8080/User/${id}`)
+    const response = await axios.get(`http://localhost:8080/users/${id}`)
     user.value = response.data
   } catch (error) {
     errorMessage.value = 'Profil alınırken bir hata oluştu: ' + error.message

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <button :disabled="buttonDisabled" @click="sendFriendRequest">
+    <button :disabled="buttonDisabled" v-if="checkButtonDisabled" @click="sendFriendRequest">
       {{ buttonText }}
     </button>
   </div>
@@ -37,6 +37,10 @@ const checkStatus = async () => {
     status.value = 'NONE'
     updateButton()
   }
+}
+
+const checkButtonDisabled = () => {
+  if(props.requesterId === !props.recieverId) return false
 }
 
 const updateButton = () => {

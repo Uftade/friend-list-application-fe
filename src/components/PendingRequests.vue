@@ -31,7 +31,7 @@ const fetchPending = async () => {
     // Her bir requesterId için kullanıcı verisi çek
     const ids = [...new Set(response.data.map(r => r.requesterId))]
     const userRequests = await Promise.all(ids.map(id =>
-        axios.get(`http://localhost:8080/User/${id}`)
+        axios.get(`http://localhost:8080/users/${id}`)
     ))
 
     userRequests.forEach(res => {

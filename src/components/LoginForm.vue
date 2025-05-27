@@ -67,13 +67,21 @@ const togglePasswordVisibility = () => {
 
 const loginUser = async () => {
   try {
-    const response = await axios.post('http://localhost:8080/User/login', user.value)
-    localStorage.setItem('loggedInUser', JSON.stringify(response.data))
-    router.push('/dashboard')
-  } catch (error) {
-    message.value = 'Giriş başarısız: Kullanıcı adı veya şifre hatalı.'
+    const response = await axios.post("http://localhost:8080/users/login", user.value);
+    const { token, user: userData } = response.data;
+
+    localStorage.setItem("token", token); // JWT Token
+    localStorage.setItem("loggedInUser", JSON.stringify(userData)); // ✅ Kullanıcı bilgisi
+
+    router.push("/dashboard");
+  } catch (err) {
+    message.value = "Giriş başarısız: " + (err.response?.data?.message || err.message);
   }
-}
+};
+
+
+
+
 </script>
 
 <style scoped>
@@ -213,7 +221,6 @@ input {
 
 .akademi-text {
   display: inline-block;
-  //animation: textSlide 6s linear infinite;
 }
 
 /*@keyframes textSlide {

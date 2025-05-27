@@ -45,7 +45,7 @@ const router = useRouter()
 onMounted(async () => {
   const id = route.params.id
   try {
-    const res = await axios.get(`http://localhost:8080/User/${id}`)
+    const res = await axios.get(`http://localhost:8080/users/${id}`)
     user.value = res.data
   } catch (err) {
     message.value = 'Kullanıcı bilgileri alınamadı: ' + err.message
@@ -54,7 +54,7 @@ onMounted(async () => {
 
 const updateProfile = async () => {
   try {
-    await axios.put(`http://localhost:8080/User/update/${route.params.id}`, user.value)
+    await axios.put(`http://localhost:8080/users/update/${route.params.id}`, user.value)
     message.value = 'Profil başarıyla güncellendi!'
   } catch (err) {
     message.value = 'Güncelleme başarısız: ' + err.message

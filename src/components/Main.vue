@@ -18,7 +18,7 @@ const login = async () => {
   }
 
   try {
-    const response = await axios.post("http://localhost:8080/User/login", {
+    const response = await axios.post("http://localhost:8080/users/login", {
       userName: username.value,
       password: password.value
     })
